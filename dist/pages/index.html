@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Telephonist</title>
+
+    <!-- Add CSS -->
+    <link rel="shortcut icon" type="image/ico" href="favicon.ico">
+    <link rel="stylesheet" href="../public/css/bootstrap/4.0.0-beta.2/bootstrap.min.css">
+
+    <!-- Add script -->
+    <script src="../public/js/jquery/3.2.1/jquery-3.2.1.min.js"></script>
+    <script src="../public/js/popper/1.12.9/popper.js"></script>
+    <script src="../public/js/bootstrap/4.0.0-beta.2/bootstrap.min.js"></script>
+
+    <style>
+        body { 
+            background: url(../public/assets/images/telephonist-bg.jpg) no-repeat center center fixed; 
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Container -->
+    <div class="container">
+
+        <!-- Jumbotron -->
+        <div class="jumbotron mt-4">
+            <h1 class="display-5">BARG Telephonist Application</h1>
+            <p class="lead">This is application for telephonist staff.</p>
+        </div> <!-- Jumbotron -->
+
+        <!-- Form for send client request -->
+        <form id="inputAddressForm">
+            <!-- Address input -->
+            <div class="form-group">
+                <input id="address" class="form-control form-control-lg" type="text" placeholder="Address">
+            </div>
+            <div class="row">
+                <!-- Vehicle type select -->
+                <div class="col-md-7">
+                    <select id="vehicleTypes" class="form-control form-control-lg mb-3">
+                        <option value="0">Premium</option>
+                        <option value="1">Normal</option>
+                    </select>
+                </div>
+                <!-- Accept button -->
+                <div class="col-md-3">
+                    <button id="accept" type="button" class="btn btn-primary btn-lg btn-block mb-3">Accept</button>
+                </div>
+                <!-- Rest button for clear input data -->
+                <div class="col-md-2">
+                    <button type="reset" class="btn btn-danger btn-lg btn-block mb-3">Reset</button>
+                </div>
+            </div>
+        </form> <!-- Form for send client request -->
+        
+    </div> <!-- Container -->
+
+    <!-- Add Google firebase -->
+    <script src="../public/js/firebase/4.6.2/firebase.js"></script>
+    <!-- Google Maps API: places libraries -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCn5m7U5eVbua_DKx4FfYzw9o0DYZZobnw&libraries=places&callback=initAutoComplete">
+    </script>
+    <!-- MD5 aglorithm -->
+    <script src="../public/js/md5.min.js"></script>
+
+    <!-- Auto Complete input -->
+    <script>
+        // Initial Google Maps API auto complete address when user
+        // is typing
+        initAutoComplete = () => {
+            var input   = document.getElementById('address');
+            var options = { types: ['address'] }; // reads more options in docs
+            new google.maps.places.Autocomplete(input, options);
+        }
+    </script>
+
+    <script>
+        // Initialize Firebase
+        var config = {
+            apiKey:             "AIzaSyCGAYvBy64KneBhZCmyy1DfdPADeNJKhnI",
+            authDomain:         "barg-transport-company.firebaseapp.com",
+            databaseURL:        "https://barg-transport-company.firebaseio.com",
+            projectId:          "barg-transport-company",
+            storageBucket:      "barg-transport-company.appspot.com",
+            messagingSenderId: "239037034269"
+        };
+        firebase.initializeApp(config);
+
+        var database = firebase.database();
+    </script>
+
+    <script>
+        // jQuery ready
+        $(() => {
+            $('#accept').click(() => {
+                if (!confirm('Are you sure?'))
+                    return;
+
+                var inputAddress    = $('#inputAddressForm :input#address').val();
+                var vehicleType     = $('#vehicleTypes').val();
+
+                if (!inputAddress || ! vehicleType) {
+                    alert('Input cannot be empty!');
+                    return;
+                }
+
+                writeAddressData(inputAddress);
+                writeBookingData(inputAddress, vehicleType);
+            });
+        });
+    </script>
+
+    <script>
+        // Writting data to booking-data in database
+        writeBookingData = (address, type) => {
+            var newKey = database.ref().child('booking-data').push().key;
+
+            // address: address of customer
+            // type:    type of vehicle
+            // time:    time insert this transaction
+            // status:  tình trạng (0 - chưa đón, 1 - đã đón)
+            database.ref('/booking-data/' + newKey).set({
+                address:    address,
+                type:       type,
+                time:       new Date().toString(),
+                status:     0
+            });
+        }
+
+        // Writting data to address-data in database
+        // With each address, we hash to take a key,
+        // we will use that key for this address
+        writeAddressData = (address) => {
+            var hashAddress = md5(address);
+
+            // Check if data existed in firebase
+            // If data existed, we do nothing
+            database.ref('/address-data/' + hashAddress).once('value').then(snapshot => {
+                return;
+            });
+
+            // Insert new data to firebase
+            // This data is a part of a dictionary for find location of address
+            database.ref('/address-data/' + hashAddress).set({
+                address: address,
+                location: {
+                    lat: 0,
+                    lng: 0
+                }
+            });
+        }
+    </script>
+</body>
+</html>
